@@ -1,0 +1,4 @@
+Sitemap: https://orlox.github.io/tenerife_stellar_evo_school/sitemap.xml
+
+User-agent: *
+Disallow:
