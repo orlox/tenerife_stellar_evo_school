@@ -20,7 +20,7 @@ Throughout the tutorial we will be making use of version `26.4.1`. If using a ne
 
 ## Reading MESA data
 
-MESA provides a powerful set of live-plotting tools ([see here](https://docs.mesastar.org/en/26.4.1/using_mesa/using_pgstar.html)) that can be adjusted in various ways. These are useful to debug your runs quickly as well as to provide something to see during your runs other than a wall of text. However, when presenting
+MESA provides a powerful set of live-plotting tools ([see here](https://docs.mesastar.org/en/26.4.1/using_mesa/using_pgstar.html)) that can be adjusted in various ways. These are useful to debug your runs quickly as well as to provide something to see during your runs other than a wall of text. However, when presenting results you often want to use a dedicated plotting package. If you 
 
 ## Structure of a single star template
 

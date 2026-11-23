@@ -59,16 +59,11 @@ Beware that we will be modifying the source files under `src`, so we will need t
 The initial conditions that we will modify are the black hole mass and the initial orbital period. These can be adjusted in `inlist_project` by changing the relevant parameters
 ```fortran
 &binary_controls
-
+   ...
    m1 = 30.0d0 ! donor mass in Msun
    m2 = 8d0 ! companion mass in Msun
    initial_period_in_days = 10d0
-
-   ! transfer efficiency controls
-   limit_retention_by_mdot_edd = .true.
-
-   max_tries_to_achieve = 20
-
+   ...
 / ! end of binary_controls namelist
 ```
 
@@ -107,7 +102,7 @@ integer function extras_binary_finish_step(binary_id)
 
 end function extras_binary_finish_step
 ```
-We can also incorporate the calculation of the merger time as discussed above. For this we can make use of the function `extras_binary_after_evolve`:
+We can also incorporate the calculation of the merger time as discussed above. For this we can make use of the function `extras_binary_after_evolve`, to prform a calculation at the very end of any simulation and print it out in the terminal:
 ```fortran
 subroutine extras_binary_after_evolve(binary_id, ierr)
    type (binary_info), pointer :: b
@@ -135,6 +130,12 @@ subroutine extras_binary_after_evolve(binary_id, ierr)
 
 end subroutine extras_binary_after_evolve
 ```
+Go through this code and make sure you understand its purpose. In doubt summon your nearest MESA expert.
+
+**BE SURE TO RECOMPILE YOUR WORK FOLDER AFTER MODIFYING THE SOURCE CODE FILES!**
+
+## Fill-up the grid!
+Now, with everything ready, go to [this spreadsheet](https://docs.google.com/spreadsheets/d/1kVxDli11I1FJF5rGQo347_j8CNiVP6uInDz4Jqmo7A8/edit?usp=sharing) and start claiming initial parameters, doing runs, and filling this grid. As it starts to populate, select systems carefully to try and identify the region where GW mergers would happen!
 
 ## References
 

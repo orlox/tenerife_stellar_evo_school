@@ -12,8 +12,8 @@ tags = ["binary", "mesa"]
 
 \toc
 
-## Setting up your working directory
+This section is meant as a more open extra task for people who have completed the previous parts of the exercise. Idea of this exercise is to combine multiple simulations of single star evolution to construct an isochrone
 
-## Determine a work plan
+## Setting up your working directory
 
 ## Produce an iso-chrone

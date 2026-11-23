@@ -77,7 +77,7 @@ You will also see that there is live plotting running showing useful information
 
 ![pgstar example](../assets/lab1/mesa_output.png)
 
-Now let your simulation go forward until it hits the termination condition placed in `inlist_project`, which is to stop once the hydrogen mass fraction goes down below $0.01$. When that happens, write down the final helium core mass, and the number of zones and timesteps.
+Now let your simulation go forward until it hits the termination condition placed in `inlist_project`, which is to stop once the hydrogen mass fraction goes down below $0.01$. When that happens, write down the final helium core mass, and the number of zones and timesteps. Take the time to also explore the output files produced by MESA in the `LOGS` directory.
 
 ## Adjusting spatial and temporal resolution
 
