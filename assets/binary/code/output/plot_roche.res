@@ -1,0 +1,1 @@
+"/home/runner/work/tenerife_stellar_evo_school/tenerife_stellar_evo_school/__site/assets/binary/code/output/shrinkage.svg"
