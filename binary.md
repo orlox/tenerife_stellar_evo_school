@@ -48,12 +48,12 @@ and then run it with
 ```
 Beware that we will be modifying the source files under `src`, so we will need to recompile the directory every time we do so. It is not necessary to recompile if one only modifies the inlist files.To illustrate a bit adjustments to inlist options, we will add a stopping condition once the mass of the donor goes below $20M_\odot$, or if it reaches core helium depletion. This will let us focus on systems undergoing case B mass transfer, systems hitting the helium core depletion would not have undergone meaningful stripping. To do this, add the following anywhere in the `&controls` section of your inlist:
 
-```julia
-!Stop when a large fraction of the star has been stripped
-star_mass_min_limit = 20d0
-!stop when the center mass fraction of he4 drops below this limit
-xa_central_lower_limit_species(1) = 'he4'
-xa_central_lower_limit(1) = 1d-3
+```fortran
+   !Stop when a large fraction of the star has been stripped
+   star_mass_min_limit = 20d0
+   !stop when the center mass fraction of he4 drops below this limit
+   xa_central_lower_limit_species(1) = 'he4'
+   xa_central_lower_limit(1) = 1d-3
 ```
 
 The initial conditions that we will modify are the black hole mass and the initial orbital period. These can be adjusted in `inlist_project` by changing the relevant parameters
@@ -74,6 +74,67 @@ The initial conditions that we will modify are the black hole mass and the initi
 
 ## Modifying your `run_binary_extras`
 
+MESA does not really have a built-in concept of unstable mass transfer, so we need to give it one. We will add two new terminating conditions in `src/run_binary_extras.f90` which are not provided as inlist options. Within these file there are multiple subroutines that allows us to add code in different stages of the simulation. In particular, we can modify the function `extras_binary_finish_step` (which is run after each step is completed) to do this:
+
+```fortran
+! returns either keep_going or terminate.
+! note: cannot request retry; extras_check_model can do that.
+integer function extras_binary_finish_step(binary_id)
+   type (binary_info), pointer :: b
+   integer, intent(in) :: binary_id
+   integer :: ierr
+   real(dp) :: mdot_th, mdot_dyn, avg_rho
+   call binary_ptr(binary_id, b, ierr)
+   if (ierr /= 0) then ! failure in  binary_ptr
+      return
+   end if
+   extras_binary_finish_step = keep_going
+
+   mdot_th = b% m(1)/(standard_cgrav*(b% m(1))**2/(b% s1% L(1)*b% r(1)))
+
+   ! finish if the mass transfer rate is significantly above the thermal rate
+   write(*,*) "check mdots", mdot_th/Msun*secyer
+   if (abs(b% mtransfer_rate)>100d0*mdot_th) then
+       write(*,*) "Finish simulation due to high mass transfer rate"
+       extras_binary_finish_step = terminate
+   end if
+
+  ! finish if the binary separation does not make sense anymore
+   if (b% r(1) > b% separation) then
+       write(*,*) "Finish simulation due to radius exceeding separation"
+       extras_binary_finish_step = terminate
+   end if
+
+end function extras_binary_finish_step
+```
+We can also incorporate the calculation of the merger time as discussed above. For this we can make use of the function `extras_binary_after_evolve`:
+```fortran
+subroutine extras_binary_after_evolve(binary_id, ierr)
+   type (binary_info), pointer :: b
+   integer, intent(in) :: binary_id
+   integer, intent(out) :: ierr
+   real(dp) :: m1f, m2f, qi, qf, ai, af, Bmerge, tmerge
+   call binary_ptr(binary_id, b, ierr)
+   if (ierr /= 0) then ! failure in  binary_ptr
+      return
+   end if
+
+   qi = b% m(1)/b% m(2)
+
+   m1f = b% s1% he_core_mass*Msun ! assume stripping down to the helium core
+   m2f = b% m(2) ! assume no further accretion
+   qf = (b% s1% he_core_mass*Msun)/b% m(2)
+
+   ai = b% separation
+   af = ai*(qi/qf)**2*((1+qi)/(1+qf))*exp(2*(qf-qi))
+
+   Bmerge = 64d0/5d0*standard_cgrav**3/clight**5*(m1f+m2f)*m1f*m2f
+   tmerge = af**4/(4d0*Bmerge)
+
+   write(*,*) "Merger time in Gigayears", tmerge/secyer/1e9
+
+end subroutine extras_binary_after_evolve
+```
 
 ## References
 
