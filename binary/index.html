@@ -2,11 +2,11 @@
 <p>and then run it with</p>
 <pre><code class="julia hljs">./rn | tee out.txt</code></pre>
 <p>Beware that we will be modifying the source files under <code>src</code>, so we will need to recompile the directory every time we do so. It is not necessary to recompile if one only modifies the inlist files.To illustrate a bit adjustments to inlist options, we will add a stopping condition once the mass of the donor goes below <span class=katex ><span class=katex-mathml ><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>20</mn><msub><mi>M</mi><mo>⊙</mo></msub></mrow><annotation encoding="application/x-tex">20M_\odot</annotation></semantics></math></span><span class=katex-html  aria-hidden=true ><span class=base ><span class=strut  style="height:0.8917em;vertical-align:-0.2083em;"></span><span class=mord >20</span><span class=mord ><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class=msupsub ><span class="vlist-t vlist-t2"><span class=vlist-r ><span class=vlist  style="height:0.2583em;"><span style="top:-2.55em;margin-left:-0.109em;margin-right:0.05em;"><span class=pstrut  style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin mtight">⊙</span></span></span></span><span class=vlist-s >​</span></span><span class=vlist-r ><span class=vlist  style="height:0.2083em;"><span></span></span></span></span></span></span></span></span></span>, or if it reaches core helium depletion. This will let us focus on systems undergoing case B mass transfer, systems hitting the helium core depletion would not have undergone meaningful stripping. To do this, add the following anywhere in the <code>&amp;controls</code> section of your inlist:</p>
-<pre><code class="julia hljs">!Stop when a large fraction of the star has been stripped
-star_mass_min_limit = <span class=hljs-number >20</span>d0
-!stop when the center mass fraction of he4 drops below this limit
-xa_central_lower_limit_species(<span class=hljs-number >1</span>) = &#x27;he4&#x27;
-xa_central_lower_limit(<span class=hljs-number >1</span>) = <span class=hljs-number >1</span>d-<span class=hljs-number >3</span></code></pre>
+<pre><code class="fortran hljs"><span class=hljs-comment >!Stop when a large fraction of the star has been stripped</span>
+   star_mass_min_limit = <span class=hljs-number >20d0</span>
+   <span class=hljs-comment >!stop when the center mass fraction of he4 drops below this limit</span>
+   xa_central_lower_limit_species(<span class=hljs-number >1</span>) = <span class=hljs-string >&#x27;he4&#x27;</span>
+   xa_central_lower_limit(<span class=hljs-number >1</span>) = <span class=hljs-number >1d-3</span></code></pre>
 <p>The initial conditions that we will modify are the black hole mass and the initial orbital period. These can be adjusted in <code>inlist_project</code> by changing the relevant parameters</p>
 <pre><code class="fortran hljs">&amp;binary_controls
 
@@ -21,6 +21,62 @@ xa_central_lower_limit(<span class=hljs-number >1</span>) = <span class=hljs-num
 
 / <span class=hljs-comment >! end of binary_controls namelist</span></code></pre>
 <h2 id=modifying_your_run_binary_extras ><a href="#modifying_your_run_binary_extras" class=header-anchor >Modifying your <code>run_binary_extras</code></a></h2>
+<p>MESA does not really have a built-in concept of unstable mass transfer, so we need to give it one. We will add two new terminating conditions in <code>src/run_binary_extras.f90</code> which are not provided as inlist options. Within these file there are multiple subroutines that allows us to add code in different stages of the simulation. In particular, we can modify the function <code>extras_binary_finish_step</code> &#40;which is run after each step is completed&#41; to do this:</p>
+<pre><code class="fortran hljs"><span class=hljs-comment >! returns either keep_going or terminate.</span>
+<span class=hljs-comment >! <span class=hljs-doctag >note:</span> cannot request retry; extras_check_model can do that.</span>
+<span class=hljs-keyword >integer</span> <span class=hljs-function ><span class=hljs-keyword >function</span></span> extras_binary_finish_step(binary_id)
+   <span class=hljs-keyword >type</span> (binary_info), <span class=hljs-keyword >pointer</span> :: b
+   <span class=hljs-keyword >integer</span>, <span class=hljs-keyword >intent</span>(<span class=hljs-keyword >in</span>) :: binary_id
+   <span class=hljs-keyword >integer</span> :: ierr
+   <span class=hljs-keyword >real</span>(dp) :: mdot_th, mdot_dyn, avg_rho
+   <span class=hljs-keyword >call</span> binary_ptr(binary_id, b, ierr)
+   <span class=hljs-keyword >if</span> (ierr /= <span class=hljs-number >0</span>) <span class=hljs-keyword >then</span> <span class=hljs-comment >! failure in  binary_ptr</span>
+      <span class=hljs-keyword >return</span>
+   <span class=hljs-keyword >end</span> <span class=hljs-keyword >if</span>
+   extras_binary_finish_step = keep_going
+
+   mdot_th = b% m(<span class=hljs-number >1</span>)/(standard_cgrav*(b% m(<span class=hljs-number >1</span>))**<span class=hljs-number >2</span>/(b% s1% L(<span class=hljs-number >1</span>)*b% r(<span class=hljs-number >1</span>)))
+
+   <span class=hljs-comment >! finish if the mass transfer rate is significantly above the thermal rate</span>
+   <span class=hljs-built_in >write</span>(*,*) <span class=hljs-string >&quot;check mdots&quot;</span>, mdot_th/Msun*secyer
+   <span class=hljs-keyword >if</span> (<span class=hljs-built_in >abs</span>(b% mtransfer_rate)&gt;<span class=hljs-number >100d0</span>*mdot_th) <span class=hljs-keyword >then</span>
+       <span class=hljs-built_in >write</span>(*,*) <span class=hljs-string >&quot;Finish simulation due to high mass transfer rate&quot;</span>
+       extras_binary_finish_step = terminate
+   <span class=hljs-keyword >end</span> <span class=hljs-keyword >if</span>
+
+  <span class=hljs-comment >! finish if the binary separation does not make sense anymore</span>
+   <span class=hljs-keyword >if</span> (b% r(<span class=hljs-number >1</span>) &gt; b% separation) <span class=hljs-keyword >then</span>
+       <span class=hljs-built_in >write</span>(*,*) <span class=hljs-string >&quot;Finish simulation due to radius exceeding separation&quot;</span>
+       extras_binary_finish_step = terminate
+   <span class=hljs-keyword >end</span> <span class=hljs-keyword >if</span>
+
+<span class=hljs-keyword >end</span> <span class=hljs-function ><span class=hljs-keyword >function</span></span> extras_binary_finish_step</code></pre>
+<p>We can also incorporate the calculation of the merger time as discussed above. For this we can make use of the function <code>extras_binary_after_evolve</code>:</p>
+<pre><code class="fortran hljs"><span class=hljs-function ><span class=hljs-keyword >subroutine</span></span> extras_binary_after_evolve(binary_id, ierr)
+   <span class=hljs-keyword >type</span> (binary_info), <span class=hljs-keyword >pointer</span> :: b
+   <span class=hljs-keyword >integer</span>, <span class=hljs-keyword >intent</span>(<span class=hljs-keyword >in</span>) :: binary_id
+   <span class=hljs-keyword >integer</span>, <span class=hljs-keyword >intent</span>(<span class=hljs-keyword >out</span>) :: ierr
+   <span class=hljs-keyword >real</span>(dp) :: m1f, m2f, qi, qf, ai, af, Bmerge, tmerge
+   <span class=hljs-keyword >call</span> binary_ptr(binary_id, b, ierr)
+   <span class=hljs-keyword >if</span> (ierr /= <span class=hljs-number >0</span>) <span class=hljs-keyword >then</span> <span class=hljs-comment >! failure in  binary_ptr</span>
+      <span class=hljs-keyword >return</span>
+   <span class=hljs-keyword >end</span> <span class=hljs-keyword >if</span>
+
+   qi = b% m(<span class=hljs-number >1</span>)/b% m(<span class=hljs-number >2</span>)
+
+   m1f = b% s1% he_core_mass*Msun <span class=hljs-comment >! assume stripping down to the helium core</span>
+   m2f = b% m(<span class=hljs-number >2</span>) <span class=hljs-comment >! assume no further accretion</span>
+   qf = (b% s1% he_core_mass*Msun)/b% m(<span class=hljs-number >2</span>)
+
+   ai = b% separation
+   af = ai*(qi/qf)**<span class=hljs-number >2</span>*((<span class=hljs-number >1</span>+qi)/(<span class=hljs-number >1</span>+qf))*<span class=hljs-built_in >exp</span>(<span class=hljs-number >2</span>*(qf-qi))
+
+   Bmerge = <span class=hljs-number >64d0</span>/<span class=hljs-number >5d0</span>*standard_cgrav**<span class=hljs-number >3</span>/clight**<span class=hljs-number >5</span>*(m1f+m2f)*m1f*m2f
+   tmerge = af**<span class=hljs-number >4</span>/(<span class=hljs-number >4d0</span>*Bmerge)
+
+   <span class=hljs-built_in >write</span>(*,*) <span class=hljs-string >&quot;Merger time in Gigayears&quot;</span>, tmerge/secyer/<span class=hljs-number >1e9</span>
+
+<span class=hljs-keyword >end</span> <span class=hljs-function ><span class=hljs-keyword >subroutine</span></span> extras_binary_after_evolve</code></pre>
 <h2 id=references ><a href="#references" class=header-anchor >References</a></h2>
 <ul>
 <li><p><a id=peters1964  class=anchor ></a> <a href="https://ui.adsabs.harvard.edu/abs/1964PhRv..136.1224P/abstract">Peters, P. C.</a>, Physical Review, vol. 136, Issue 4B, pp. 1224-1232, 1964</p>
