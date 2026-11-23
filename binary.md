@@ -21,34 +21,6 @@ $$\frac{a_\mathrm{f}}{a_\mathrm{i}}=\left(\frac{q_\mathrm{i}}{q_\mathrm{f}}\righ
 
 The initial and final points needs not refer to that at the onset or end of the mass transfer phase, they can also be any arbitrary point during the process. From that we can estimate how much the orbital separation would change respect to the initial one in terms of the accretor mass and the mass of the companion. In particular, the figure below shows an example of a $30M_\odot$ star being stripped down to $15M_\odot$ by companions of different masses. 
 
-
-```julia:plot_roche
-#hideall
-
-# unitless potential, mass in units of M1, distance in units of a
-function a_div_ai(qf,qi)
-    return (qi/qf)^(2)*((1+qi)/(1+qf))*exp(2*(qf-qi))
-end
-
-# check things by plotting a few equipotentials in the X-Y plane
-using Plots
-
-Mdonor = 30
-Mfinal = 15
-
-
-xvals = LinRange(15,30,100)
-plot()
-for Ma in [7,6,5,4]
-    qvals = xvals./Ma
-    qi = 30/Ma
-    plot!(xvals, map(qf->log10(a_div_ai(qf,qi)), qvals), label=string(Ma)*"\$M_\\odot\$", legend=:bottomright)
-end
-xlabel!("\$M_\\mathrm{donor}\\;[M_{\\odot}]\$")
-ylabel!("\$\\log(a/a_\\mathrm{i})\$")
-savefig(joinpath(@OUTPUT, "shrinkage.svg"))
-
-```
 \figenv{Expected evolution of the orbital separation in terms of initial separation for a $30M_\odot$ donor star
 being stripped by a companion through fully non-conservative mass transfer (assuming isotropic re-emission from the accretor). Each line is for a different accretor mass.}{/assets/lab2/shrinkage.svg}{width:100%;border: 1px solid gray;}
 
@@ -62,9 +34,43 @@ is to study whether or not at the boundary for stability the mass ratio is extre
 separation for gravitational waves to take over. We will consider a $30M_\odot$ donor star with different masses for a black hole companion, and compute a grid of simulations
 using all the cores at disposition from the attending crowd.
 
+Owing to time constraints we will not model the full mass transfer phase, but only run simulations until the $30M_\odot$ donor is stripped to $20M_\odot$. From this point we will assume mass transfer will be stable until it strips the star down to its helium core mass, and estimate from that if we can produce a merger due to GW emission in the lifetime of the Universe. We will also focus on case B simulations, as case A simulations can be significantly more expensive to run, and there is no well defined helium core mass to make the approximation stated before.
+
 ## Setting up your template
 
-You will need to make use of the template provided [here](../assets/lab2/part2.tar.gz).
+You will need to make use of the template provided [here](../assets/lab2/part2.tar.gz). This simulation models only one component, while the black hole is taken to be a point mass with mass accretion limited to its Eddington rate. Just as with the single star template, you can compile this one by doing:
+```bash
+./clean && ./mk
+```
+and then run it with
+```
+./rn | tee out.txt
+```
+Beware that we will be modifying the source files under `src`, so we will need to recompile the directory every time we do so. It is not necessary to recompile if one only modifies the inlist files.To illustrate a bit adjustments to inlist options, we will add a stopping condition once the mass of the donor goes below $20M_\odot$, or if it reaches core helium depletion. This will let us focus on systems undergoing case B mass transfer, systems hitting the helium core depletion would not have undergone meaningful stripping. To do this, add the following anywhere in the `&controls` section of your inlist:
+
+```julia
+!Stop when a large fraction of the star has been stripped
+star_mass_min_limit = 20d0
+!stop when the center mass fraction of he4 drops below this limit
+xa_central_lower_limit_species(1) = 'he4'
+xa_central_lower_limit(1) = 1d-3
+```
+
+The initial conditions that we will modify are the black hole mass and the initial orbital period. These can be adjusted in `inlist_project` by changing the relevant parameters
+```fortran
+&binary_controls
+
+   m1 = 30.0d0 ! donor mass in Msun
+   m2 = 8d0 ! companion mass in Msun
+   initial_period_in_days = 10d0
+
+   ! transfer efficiency controls
+   limit_retention_by_mdot_edd = .true.
+
+   max_tries_to_achieve = 20
+
+/ ! end of binary_controls namelist
+```
 
 ## Modifying your `run_binary_extras`
 
