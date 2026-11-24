@@ -9,6 +9,8 @@ This website is part of the *XXXVII Canary Islands Winter School of Astrophysics
 
 It is assumed that going into the tutorial session you will already have MESA installed and running in your computer. If not, your task through the session will be to install it and try to catch up with the rest!
 
+If you want to see the introductory slides for this session, you can access those [here](../assets/20261124_tenerife.pdf).
+
 ## Pre-requisites
 
 Before starting you need to have a working MESA installation. Straightforward instructions are provided in the MESA website. In particular, do the following:
@@ -20,7 +22,20 @@ Throughout the tutorial we will be making use of version `26.4.1`. If using a ne
 
 ## Reading MESA data
 
-MESA provides a powerful set of live-plotting tools ([see here](https://docs.mesastar.org/en/26.4.1/using_mesa/using_pgstar.html)) that can be adjusted in various ways. These are useful to debug your runs quickly as well as to provide something to see during your runs other than a wall of text. However, when presenting results you often want to use a dedicated plotting package. If you 
+MESA provides a powerful set of live-plotting tools ([see here](https://docs.mesastar.org/en/26.4.1/using_mesa/using_pgstar.html)) that can be adjusted in various ways. These are useful to debug your runs quickly as well as to provide something to see during your runs other than a wall of text. However, when presenting results you often want to use a dedicated plotting package. If you use python, a simple way to read a MESA file is:
+```python
+import numpy as np
+data = np.genfromtxt('LOGS/history.data', skip_header=5, names=True)
+data["log_L"]
+```
+which will give you a vector containing the value of $\log_{10}(L/L_\odot)$ at each stored timestep.
+
+If you're part of my cult and like the julia programming programming language you can do:
+```julia
+using DataFrames, CSV
+df = DataFrame(CSV.File("LOGS/history.data", delim=" ", ignorerepeated=true, skipto=7, header=6))
+df[!,:log_L]
+```
 
 ## Structure of a single star template
 
