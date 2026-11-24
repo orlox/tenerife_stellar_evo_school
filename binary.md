@@ -46,7 +46,7 @@ and then run it with
 ```
 ./rn | tee out.txt
 ```
-Beware that we will be modifying the source files under `src`, so we will need to recompile the directory every time we do so. It is not necessary to recompile if one only modifies the inlist files.To illustrate a bit adjustments to inlist options, we will add a stopping condition once the mass of the donor goes below $20M_\odot$, or if it reaches core helium depletion. This will let us focus on systems undergoing case B mass transfer, systems hitting the helium core depletion would not have undergone meaningful stripping. To do this, add the following anywhere in the `&controls` section of your inlist:
+Beware that we will be modifying the source files under `src`, so we will need to recompile the directory every time we do so. It is not necessary to recompile if one only modifies the inlist files.To illustrate a bit adjustments to inlist options, we will add a stopping condition once the mass of the donor goes below $20M_\odot$, or if it reaches core helium depletion. This will let us focus on systems undergoing case B mass transfer, systems hitting the helium core depletion would not have undergone meaningful stripping. To do this, add the following anywhere in the `&controls` section of your `inlist1`:
 
 ```fortran
    !Stop when a large fraction of the star has been stripped
