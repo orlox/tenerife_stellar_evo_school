@@ -9,7 +9,7 @@ This website is part of the *XXXVII Canary Islands Winter School of Astrophysics
 
 It is assumed that going into the tutorial session you will already have MESA installed and running in your computer. If not, your task through the session will be to install it and try to catch up with the rest!
 
-If you want to see the introductory slides for this session, you can access those [here](../assets/20261124_tenerife.pdf).
+If you want to see the introductory slides for this session, you can access those [here](assets/20261124_tenerife.pdf).
 
 ## Pre-requisites
 
